@@ -1,6 +1,6 @@
 services:
   database_orders:
-    image: postgres:16.2
+    image: postgres:alpine
     container_name: database_orders
     environment:
       POSTGRES_USER: postgres

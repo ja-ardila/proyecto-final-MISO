@@ -1,0 +1,48 @@
+name: Deploy to GCP Cloud SQL
+
+on:
+  push:
+    branches:
+      - **
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v1
+      with:
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+        service_account_key: ${{ secrets.GCP_CREDENTIALS }}
+
+    - name: Authenticate to GCP
+      run: gcloud auth activate-service-account --key-file=${{ secrets.GCP_CREDENTIALS }}
+
+    - name: Create Cloud SQL instance
+      run: |
+        gcloud sql instances create ${{ secrets.DB_INSTANCE_NAME }} \
+          --database-version=POSTGRES_13 \
+          --cpu=1 \
+          --memory=0.614GB \
+          --region=us-central1 \
+          --tier=db-f1-micro
+
+    - name: Set root password
+      run: |
+        gcloud sql users set-password postgres \
+          --instance=${{ secrets.DB_INSTANCE_NAME }} \
+          --password=${{ secrets.DB_PASSWORD }}
+
+    - name: Create database
+      run: |
+        gcloud sql databases create ${{ secrets.DB_NAME }} \
+          --instance=${{ secrets.DB_INSTANCE_NAME }}
+
+    - name: Allow connections from any IP
+      run: |
+        gcloud sql instances patch ${{ secrets.DB_INSTANCE_NAME }} \
+          --authorized-networks=0.0.0.0/0
